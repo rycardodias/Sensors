@@ -7,19 +7,17 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.hardware.camera2.CameraManager
-import android.media.Image
 import android.net.Uri
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.example.sensors.databinding.ActivityMainBinding
 import java.io.File
-import java.lang.Exception
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -34,6 +32,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var mAccelerometer: Sensor? = null
     private var mLight: Sensor? = null
 
+    private var torchBoolean: Boolean = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -43,7 +43,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         outputDirectory = getOutputDirectory()
 
         if (allPermissionGranted()) {
-            Toast.makeText(this, "We have Permissions", Toast.LENGTH_SHORT).show()
             startCamera()
         } else {
             ActivityCompat.requestPermissions(
@@ -87,6 +86,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun takePhoto() {
+
         val imagecapture = imageCapture ?: return
         val photoFile = File(
             outputDirectory,
@@ -123,7 +123,16 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun changeFlashState(state: Boolean) {
+        torchBoolean = state
+        Log.d("VALOR", torchBoolean.toString())
 
+        Timer().schedule(object : TimerTask() {
+            override fun run() {
+                torchBoolean = false
+                Log.d("VALOR", torchBoolean.toString())
+
+            }
+        }, 3)
     }
 
 
@@ -146,9 +155,13 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
             try {
                 cameraProvider.unbindAll()
-                cameraProvider.bindToLifecycle(
+                var camera = cameraProvider.bindToLifecycle(
                     this, cameraSelector, preview, imageCapture
                 )
+
+                camera.cameraControl.enableTorch(torchBoolean)
+
+
             } catch (e: Exception) {
                 Log.d(Constants.TAG, "startCamera Fail: ", e)
             }
@@ -191,9 +204,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             if (((luz - event.values[0]) > 100) || ((event.values[0] - luz) > 100)) {
                 luz = event.values[0]
 
-                if (event.values[0] < 300) {
+                if (event.values[0] < 100) {
                     makeToast(3)
-                    changeFlashState(true)
                 }
             }
         }
@@ -227,7 +239,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 emQueda = 0
                 emMoviementoRapido = 0
                 estaEscuro = 0
-                changeFlashState(false)
             }
         }, 5000)
 
